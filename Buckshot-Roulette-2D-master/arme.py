@@ -13,7 +13,7 @@ class Arme:
         self.blanche = pygame.image.load("./images/blanche.png")
         self.blanche = pygame.transform.scale(self.blanche, (69, 45))
         self.blanche = pygame.transform.rotate(self.blanche, 90)
-        self.rouge = pygame.image.load("./images/rouge.png")        
+        self.rouge = pygame.image.load("./images/rouge.png")
         self.rouge = pygame.transform.scale(self.rouge, (69, 45))
         self.rouge = pygame.transform.rotate(self.rouge, 90)
         self.vie_joueur = list(vie_joueur)
@@ -57,5 +57,25 @@ class Arme:
             else:
                 self.affichage_balle(fenetre, (pos_x_r, 574), (255, 0, 0))
                 pos_x_r += 12
-        
-                
+
+    def tire_self(self, life):
+        """
+        현재 플레이어 본인을 발사.
+        """
+        if self.chargeur:
+            damage = 1  # 한 번 발사 시 입히는 피해량
+            self.chargeur.pop()  # 탄창에서 총알 하나 제거
+            life = max(0, life - damage)
+            return True, life
+        return False, life
+
+    def tire_opponent(self, opponent_life):
+        """
+        상대 플레이어를 발사.
+        """
+        if self.chargeur:
+            damage = 1
+            self.chargeur.pop()
+            opponent_life = max(0, opponent_life - damage)
+            return True, opponent_life
+        return False, opponent_life
