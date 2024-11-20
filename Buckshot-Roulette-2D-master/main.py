@@ -49,6 +49,17 @@ shoot_opponent_button_rect = pygame.Rect(540, 600, 120, 40)
 shoot_self_text = police.render("Shoot Self", True, BLANC)
 shoot_opponent_text = police.render("Shoot Opponent", True, BLANC)
 
+# 뒤로가기 버튼 추가
+retour_button_image = pygame.image.load("./images/retour.png")
+
+# 원하는 크기로 스케일 조정 (예: 50x50 크기)
+retour_button_size = (50, 50)  # 너비와 높이
+retour_button_image = pygame.transform.scale(retour_button_image, retour_button_size)
+
+# 버튼의 Rect 업데이트
+retour_button_rect = retour_button_image.get_rect()
+retour_button_rect.topleft = (20, 620)  # 뒤로가기 버튼 위치
+
 
 def est_survole(x, y, largeur, hauteur):
     """
@@ -191,6 +202,9 @@ while run:
         # 발사 버튼 그리기
         draw_buttons(fenetre, current_player)
 
+        # 뒤로가기 버튼 표시
+        fenetre.blit(retour_button_image, retour_button_rect.topleft)
+
         # 담배 활성화 상태에 따라 위치에 표시
         if cigarette1_active:
             cigarette1.affiche_cigarette(fenetre, *cigarette1_position)  # Player 1 담배 위치
@@ -201,7 +215,11 @@ while run:
             if event.type == pygame.QUIT:
                 run = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if shoot_self_button_rect.collidepoint(pygame.mouse.get_pos()):
+                if retour_button_rect.collidepoint(pygame.mouse.get_pos()):
+                    # 뒤로가기 버튼 클릭 시 메뉴로 이동
+                    in_menu = True
+                    game.playing = False
+                elif shoot_self_button_rect.collidepoint(pygame.mouse.get_pos()):
                     # 본인을 발사 대상으로 선택
                     if arme.chargeur:
                         success, player_lives[current_player] = arme.tire_self(player_lives[current_player])
@@ -220,6 +238,21 @@ while run:
                             winner = "Player 2" if loser == 0 else "Player 1"
                             break
                         current_player = (current_player + 1) % 2
+                # Player 1 담배와 상호작용
+                if cigarette1_active and pygame.Rect(cigarette1_position[0], cigarette1_position[1],
+                                                     cigarette1.image.get_width(),
+                                                     cigarette1.image.get_height()).collidepoint(
+                    pygame.mouse.get_pos()):
+                    player_lives[0] += 1  # Player 1 생명력 증가
+                    cigarette1_active = False  # 담배 사용 후 비활성화
+
+                # Player 2 담배와 상호작용
+                if cigarette2_active and pygame.Rect(cigarette2_position[0], cigarette2_position[1],
+                                                     cigarette2.image.get_width(),
+                                                     cigarette2.image.get_height()).collidepoint(
+                    pygame.mouse.get_pos()):
+                    player_lives[1] += 1  # Player 2 생명력 증가
+                    cigarette2_active = False  # 담배 사용 후 비활성화
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     # 재장전
@@ -228,23 +261,6 @@ while run:
                     # 50% 확률로 담배 다시 활성화
                     cigarette1_active = random.choice([True, False])
                     cigarette2_active = random.choice([True, False])
-
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                # Player 1 담배와 상호작용
-                if cigarette1_active and pygame.Rect(cigarette1_position[0], cigarette1_position[1],
-                                                     cigarette1.image.get_width(),
-                                                     cigarette1.image.get_height()).collidepoint(
-                        pygame.mouse.get_pos()):
-                    player_lives[0] += 1  # Player 1 생명력 증가
-                    cigarette1_active = False  # 담배 사용 후 비활성화
-
-                # Player 2 담배와 상호작용
-                if cigarette2_active and pygame.Rect(cigarette2_position[0], cigarette2_position[1],
-                                                     cigarette2.image.get_width(),
-                                                     cigarette2.image.get_height()).collidepoint(
-                        pygame.mouse.get_pos()):
-                    player_lives[1] += 1  # Player 2 생명력 증가
-                    cigarette2_active = False  # 담배 사용 후 비활성화
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if shoot_self_button_rect.collidepoint(pygame.mouse.get_pos()):
