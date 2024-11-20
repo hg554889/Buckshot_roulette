@@ -17,9 +17,9 @@ NOIR = (0, 0, 0)
 
 background = pygame.image.load("./images/background.png")
 police = pygame.font.SysFont("Times New Roman", 20)
-jouer_texte = police.render("Jouer", 1, BLANC)
-regles_texte = police.render("Règles du jeu", 1, BLANC)
-quitter_texte = police.render("Quitter le jeu", 1, BLANC)
+jouer_texte = police.render("Play", 1, BLANC)
+regles_texte = police.render("Rules", 1, BLANC)
+quitter_texte = police.render("Quit", 1, BLANC)
 
 # Créez une instance des différentes classes:
 map = Carte()
@@ -40,6 +40,14 @@ cigarette2_active = False  # Player 2의 담배 활성화 상태
 # 담배의 위치 설정 (각 사각형 영역의 중앙에 배치)
 cigarette1_position = (80, 200)  # 왼쪽 사각형 영역 안에 위치
 cigarette2_position = (920, 200)  # 오른쪽 사각형 영역 안에 위치
+
+# 버튼 위치와 크기 설정
+shoot_self_button_rect = pygame.Rect(420, 600, 120, 40)
+shoot_opponent_button_rect = pygame.Rect(540, 600, 120, 40)
+
+# 버튼 텍스트
+shoot_self_text = police.render("Shoot Self", True, BLANC)
+shoot_opponent_text = police.render("Shoot Opponent", True, BLANC)
 
 
 def est_survole(x, y, largeur, hauteur):
@@ -105,26 +113,38 @@ def draw_game_over(fenetre, winner):
                   fenetre.get_height() // 2 - game_over_text.get_height() // 2))
 
 
+# 버튼 그리기 함수
+def draw_buttons(fenetre, current_player):
+    """
+    발사 버튼을 화면에 그리기.
+    """
+    pygame.draw.rect(fenetre, ROUGE if est_survole(*shoot_self_button_rect) else BLANC, shoot_self_button_rect, 2)
+    pygame.draw.rect(fenetre, ROUGE if est_survole(*shoot_opponent_button_rect) else BLANC, shoot_opponent_button_rect, 2)
+
+    fenetre.blit(shoot_self_text, (shoot_self_button_rect.x + 10, shoot_self_button_rect.y + 10))
+    fenetre.blit(shoot_opponent_text, (shoot_opponent_button_rect.x + 10, shoot_opponent_button_rect.y + 10))
+
+
 run = True
 while run:
     fenetre.blit(background, (0, 0))
 
     if in_menu:
         # 메뉴 화면 처리
-        if est_survole(520, 475, jouer_texte.get_width(), jouer_texte.get_height()):
-            jouer_texte = police.render("Jouer", 1, ROUGE)
+        if est_survole(490, 475, jouer_texte.get_width(), jouer_texte.get_height()):
+            jouer_texte = police.render("Play", 1, ROUGE)
         else:
-            jouer_texte = police.render("Jouer", 1, BLANC)
+            jouer_texte = police.render("Play", 1, BLANC)
         if est_survole(490, 510, regles_texte.get_width(), regles_texte.get_height()):
-            regles_texte = police.render("Règles du jeu", 1, ROUGE)
+            regles_texte = police.render("Rules", 1, ROUGE)
         else:
-            regles_texte = police.render("Règles du jeu", 1, BLANC)
+            regles_texte = police.render("Rules", 1, BLANC)
         if est_survole(480, 545, quitter_texte.get_width(), quitter_texte.get_height()):
-            quitter_texte = police.render("Quitter le jeu", 1, ROUGE)
+            quitter_texte = police.render("Quit", 1, ROUGE)
         else:
-            quitter_texte = police.render("Quitter le jeu", 1, BLANC)
+            quitter_texte = police.render("Quit", 1, BLANC)
 
-        fenetre.blit(jouer_texte, (520, 475))
+        fenetre.blit(jouer_texte, (490, 475))
         fenetre.blit(regles_texte, (490, 510))
         fenetre.blit(quitter_texte, (490, 545))
 
@@ -132,9 +152,9 @@ while run:
             if event.type == pygame.QUIT:
                 run = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if pygame.Rect(520, 475, jouer_texte.get_width(), jouer_texte.get_height()).collidepoint(
+                if pygame.Rect(490, 475, jouer_texte.get_width(), jouer_texte.get_height()).collidepoint(
                         pygame.mouse.get_pos()):
-                    # "Jouer" 버튼 클릭 시 게임 시작
+                    # "Play" 버튼 클릭 시 게임 시작
                     in_menu = False
                     game.playing = True
 
@@ -144,12 +164,12 @@ while run:
                     cigarette2_active = True  # Player 2 담배 활성화
                 elif pygame.Rect(490, 510, regles_texte.get_width(), regles_texte.get_height()).collidepoint(
                         pygame.mouse.get_pos()):
-                    # "Règles du jeu" 버튼 클릭 시 규칙 화면 표시
+                    # "Rules" 버튼 클릭 시 규칙 화면 표시
                     menu.flou_playing = True
                     menu.regle_playing = True
                 elif pygame.Rect(480, 545, quitter_texte.get_width(), quitter_texte.get_height()).collidepoint(
                         pygame.mouse.get_pos()):
-                    # "Quitter le jeu" 버튼 클릭 시 게임 종료
+                    # "Quit" 버튼 클릭 시 게임 종료
                     run = False
 
     elif game.playing and not game_over:
@@ -168,6 +188,9 @@ while run:
         # 현재 턴 표시
         affiche_tour(fenetre, current_player)
 
+        # 발사 버튼 그리기
+        draw_buttons(fenetre, current_player)
+
         # 담배 활성화 상태에 따라 위치에 표시
         if cigarette1_active:
             cigarette1.affiche_cigarette(fenetre, *cigarette1_position)  # Player 1 담배 위치
@@ -177,20 +200,28 @@ while run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if shoot_self_button_rect.collidepoint(pygame.mouse.get_pos()):
+                    # 본인을 발사 대상으로 선택
+                    if arme.chargeur:
+                        success, player_lives[current_player] = arme.tire_self(player_lives[current_player])
+                        game_over, loser = check_game_over(player_lives)
+                        if game_over:
+                            winner = "Player 2" if loser == 0 else "Player 1"
+                            break
+                        current_player = (current_player + 1) % 2
+                elif shoot_opponent_button_rect.collidepoint(pygame.mouse.get_pos()):
+                    # 상대를 발사 대상으로 선택
+                    if arme.chargeur:
+                        success, player_lives[(current_player + 1) % 2] = arme.tire_opponent(
+                            player_lives[(current_player + 1) % 2])
+                        game_over, loser = check_game_over(player_lives)
+                        if game_over:
+                            winner = "Player 2" if loser == 0 else "Player 1"
+                            break
+                        current_player = (current_player + 1) % 2
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and arme.chargeur:
-                    # 총 발사
-                    _, player_lives = arme.tire(current_player)
-
-                    # 게임 종료 조건 확인
-                    game_over, loser = check_game_over(player_lives)
-                    if game_over:
-                        winner = "Player 2" if loser == 0 else "Player 1"
-                        break
-
-                    # 다음 플레이어로 턴 전환
-                    current_player = (current_player + 1) % 2
-                elif event.key == pygame.K_r:
+                if event.key == pygame.K_r:
                     # 재장전
                     arme.recharge()
 
@@ -214,6 +245,26 @@ while run:
                         pygame.mouse.get_pos()):
                     player_lives[1] += 1  # Player 2 생명력 증가
                     cigarette2_active = False  # 담배 사용 후 비활성화
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if shoot_self_button_rect.collidepoint(pygame.mouse.get_pos()):
+                    # 본인을 발사 대상으로 선택
+                    if arme.chargeur:
+                        success, player_lives[current_player] = arme.tire_self(player_lives[current_player])
+                        game_over, loser = check_game_over(player_lives)
+                        if game_over:
+                            winner = "Player 2" if loser == 0 else "Player 1"
+                            break
+                        current_player = (current_player + 1) % 2
+                elif shoot_opponent_button_rect.collidepoint(pygame.mouse.get_pos()):
+                    # 상대를 발사 대상으로 선택
+                    if arme.chargeur:
+                        success, player_lives[(current_player + 1) % 2] = arme.tire_opponent(player_lives[(current_player + 1) % 2])
+                        game_over, loser = check_game_over(player_lives)
+                        if game_over:
+                            winner = "Player 2" if loser == 0 else "Player 1"
+                            break
+                        current_player = (current_player + 1) % 2
 
     elif game_over:
         # 게임 종료 화면
