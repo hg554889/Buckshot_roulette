@@ -5,6 +5,9 @@ from game import Game
 from arme import Arme
 from map import Carte
 from cigarettes import Cigarette
+# from card_1 import Card1
+# from card_2 import Card2
+# from card_3 import Card3a
 
 pygame.init()
 
