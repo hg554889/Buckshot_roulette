@@ -7,7 +7,7 @@ from map import Carte
 from cigarettes import Cigarette
 # from card_1 import Card1
 # from card_2 import Card2
-# from card_3 import Card3a
+# from card_3 import Card3
 
 pygame.init()
 
@@ -241,18 +241,18 @@ while run:
                             winner = "Player 2" if loser == 0 else "Player 1"
                             break
                         current_player = (current_player + 1) % 2
-                # Player 1 담배와 상호작용
-                if cigarette1_active and pygame.Rect(cigarette1_position[0], cigarette1_position[1],
-                                                     cigarette1.image.get_width(),
-                                                     cigarette1.image.get_height()).collidepoint(
+                # Player 1 담배 상호작용 (Player 1의 차례에서만 가능)
+                if current_player == 0 and cigarette1_active and pygame.Rect(
+                        cigarette1_position[0], cigarette1_position[1],
+                        cigarette1.image.get_width(), cigarette1.image.get_height()).collidepoint(
                     pygame.mouse.get_pos()):
                     player_lives[0] += 1  # Player 1 생명력 증가
                     cigarette1_active = False  # 담배 사용 후 비활성화
 
-                # Player 2 담배와 상호작용
-                if cigarette2_active and pygame.Rect(cigarette2_position[0], cigarette2_position[1],
-                                                     cigarette2.image.get_width(),
-                                                     cigarette2.image.get_height()).collidepoint(
+                # Player 2 담배 상호작용 (Player 2의 차례에서만 가능)
+                if current_player == 1 and cigarette2_active and pygame.Rect(
+                        cigarette2_position[0], cigarette2_position[1],
+                        cigarette2.image.get_width(), cigarette2.image.get_height()).collidepoint(
                     pygame.mouse.get_pos()):
                     player_lives[1] += 1  # Player 2 생명력 증가
                     cigarette2_active = False  # 담배 사용 후 비활성화
