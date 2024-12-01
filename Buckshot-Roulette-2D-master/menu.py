@@ -12,6 +12,7 @@ class Menu:
         self.regles = pygame.image.load("./images/regles.png")
         self.retour = pygame.transform.scale(self.retour, (100, 100))
         self.retour_rect = self.retour.get_rect()
+        # self.map_choice = pygame.image.load("./images/")
 
     def flou_bg(self, fenetre):
         if self.flou_playing:
@@ -24,3 +25,4 @@ class Menu:
     def affichage_regle(self, fenetre):
         if self.regle_playing:
             fenetre.blit(self.regles, (150, 80))
+        
