@@ -32,12 +32,13 @@ class Arme:
             random.shuffle(self.chargeur)
             print(self.chargeur)
         return self.chargeur
-    
-    def tire(self, cible):
-        if self.chargeur:  # 충전된 총알이 있으면 발사
-            bullet = self.chargeur.pop(-1)
-            self.vie_joueur[cible] -= bullet
-        return self.chargeur, self.vie_joueur
+
+    def tire(self):
+        if self.chargeur:
+            bullet = self.chargeur.pop(0)  # 탄창에서 총알을 한 발 제거
+            return bullet  # 발사된 총알의 유형 반환 (1: 실탄, 0: 공포탄)
+        else:
+            return None  # 탄창이 비었을 경우
 
     def affichage_balle(self, fenetre, cord, couleur):
         pygame.draw.rect(fenetre, couleur, (cord, (8, 25)), 0)
@@ -46,10 +47,14 @@ class Arme:
     def affichage_shotgun(self, fenetre):
         fenetre.blit(self.shotgun, (455, 330))
 
-    def affichage_chargeur(self):
+    def affichage_chargeur(self, fenetre):
+        """
+        현재 탄창 상태를 화면에 렌더링합니다.
+        :param fenetre: Pygame 화면 객체
+        """
         pos_x_b = 492
         pos_x_r = 492 + (12 * self.chargeur.count(0)) + 5
-        nb_balles_blanche = self.chargeur.count(0) 
+        nb_balles_blanche = self.chargeur.count(0)
         for i in range(len(self.chargeur)):
             if i <= nb_balles_blanche - 1:
                 self.affichage_balle(fenetre, (pos_x_b, 574), (255, 255, 255))
