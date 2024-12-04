@@ -8,6 +8,7 @@ from cigarettes import Cigarette
 from enhanced_bullet import Bullet
 from scarecrow import Scarecrow
 from grenade import Grenade
+import os
 
 pygame.init()
 
@@ -18,11 +19,17 @@ BLANC = (255, 255, 255)
 ROUGE = (255, 0, 0)
 NOIR = (0, 0, 0)
 
-background = pygame.image.load("./images/background.png")
+# 배경 이미지 로딩
+try:
+    background = pygame.image.load(os.path.join('images', 'background.png')).convert()
+except pygame.error as e:
+    print(f"배경 이미지 로딩 실패: {e}")
+    background = pygame.Surface((1080, 720))
+
 police = pygame.font.SysFont("Times New Roman", 20)
-jouer_texte = police.render("Play", 1, BLANC)
-regles_texte = police.render("Rules", 1, BLANC)
-quitter_texte = police.render("Quit", 1, BLANC)
+jouer_texte = police.render("Play", True, BLANC)
+regles_texte = police.render("Rules", True, BLANC)
+quitter_texte = police.render("Quit", True, BLANC)
 
 # 클래스 인스턴스 생성:
 map = Carte()
@@ -33,16 +40,24 @@ cigarette1 = Cigarette()  # Player 1의 담배
 cigarette2 = Cigarette()  # Player 2의 담배
 
 # 초기화
-player_lives = [3, 3]  # 두 플레이어의 초기 생명력
+player_lives = [5, 5]  # 두 플레이어의 초기 생명력
 current_player = 0  # 현재 차례인 플레이어 (0: Player 1, 1: Player 2)
 game_over = False
 in_menu = True  # 메뉴 상태를 관리하는 변수
-cigarette1_active = False  # Player 1의 담배 활성화 상태
-cigarette2_active = False  # Player 2의 담배 활성화 상태
 
 # 담배의 위치 설정 (각 사각형 영역의 중앙에 배치)
 cigarette1_position = (80, 200)  # 왼쪽 사각형 영역 안에 위치
 cigarette2_position = (920, 200)  # 오른쪽 사각형 영역 안에 위치
+
+# Scarecrow의 위치 설정
+scarecrow1_position = (80, 400)  # Player 1의 Scarecrow 위치
+scarecrow2_position = (920, 400)  # Player 2의 Scarecrow 위치
+
+# Scarecrow 객체 생성 및 초기 비활성화
+scarecrow1 = Scarecrow(position=scarecrow1_position, size=(80, 80))
+scarecrow2 = Scarecrow(position=scarecrow2_position, size=(80, 80))
+scarecrow1.active = False
+scarecrow2.active = False
 
 # Bullet의 크기를 담배와 동일하게 설정
 bullet_size = (cigarette1.image.get_width(), cigarette1.image.get_height())
@@ -59,6 +74,9 @@ bullets = [Bullet(position=pos, size=bullet_size) for pos in bullet_positions]
 # 플레이어별 강화 상태 추적
 bullet_enhanced = [False, False]  # [Player 1의 강화 상태, Player 2의 강화 상태]
 
+# Scarecrow 보호 상태 플래그
+scarecrow_protected = [False, False]  # [Player 1 보호 상태, Player 2 보호 상태]
+
 # 버튼 위치와 크기 설정
 shoot_self_button_rect = pygame.Rect(420, 600, 120, 40)
 shoot_opponent_button_rect = pygame.Rect(540, 600, 120, 40)
@@ -68,7 +86,11 @@ shoot_self_text = police.render("Shoot Self", True, BLANC)
 shoot_opponent_text = police.render("Shoot Opponent", True, BLANC)
 
 # 뒤로가기 버튼 추가
-retour_button_image = pygame.image.load("./images/retour.png")
+try:
+    retour_button_image = pygame.image.load(os.path.join('images', 'retour.png')).convert_alpha()
+except pygame.error as e:
+    print(f"뒤로가기 버튼 이미지 로딩 실패: {e}")
+    retour_button_image = pygame.Surface((50, 50), pygame.SRCALPHA)
 
 # 원하는 크기로 스케일 조정 (예: 50x50 크기)
 retour_button_size = (50, 50)  # 너비와 높이
@@ -78,6 +100,7 @@ retour_button_image = pygame.transform.scale(retour_button_image, retour_button_
 retour_button_rect = retour_button_image.get_rect()
 retour_button_rect.topleft = (20, 620)  # 뒤로가기 버튼 위치
 
+
 def est_survole(x, y, largeur, hauteur):
     """
     마우스가 버튼 위에 있는지 확인.
@@ -85,22 +108,24 @@ def est_survole(x, y, largeur, hauteur):
     souris_x, souris_y = pygame.mouse.get_pos()
     return x < souris_x < x + largeur and y < souris_y < y + hauteur
 
+
 def affiche_vie(fenetre, lives):
     """
     두 플레이어의 생명력을 화면 중앙에 표시.
     """
-    police = pygame.font.SysFont("Arial", 24)
+    police_vie = pygame.font.SysFont("Arial", 24)
     text_p1 = f"Player 1 HP: {lives[0]}"
     text_p2 = f"Player 2 HP: {lives[1]}"
 
-    text_p1_surface = police.render(text_p1, True, BLANC)
-    text_p2_surface = police.render(text_p2, True, BLANC)
+    text_p1_surface = police_vie.render(text_p1, True, BLANC)
+    text_p2_surface = police_vie.render(text_p2, True, BLANC)
 
     fenetre_rect = fenetre.get_rect()
     text_y = 50
 
     fenetre.blit(text_p1_surface, ((fenetre_rect.width - text_p1_surface.get_width()) // 2, text_y))
     fenetre.blit(text_p2_surface, ((fenetre_rect.width - text_p2_surface.get_width()) // 2, text_y + 30))
+
 
 def affiche_tour(fenetre, current_player):
     """
@@ -116,6 +141,7 @@ def affiche_tour(fenetre, current_player):
         # Player 2의 턴일 때: 오른쪽 위에 표시
         fenetre.blit(turn_text, (fenetre.get_width() - turn_text.get_width() - 20, 20))
 
+
 def check_game_over(lives):
     """
     게임 종료 조건 확인. 생명력이 0 이하인 플레이어가 있으면 True와 해당 플레이어 반환.
@@ -125,18 +151,19 @@ def check_game_over(lives):
             return True, i
     return False, -1
 
+
 def draw_game_over(fenetre, winner):
     """
     게임 종료 화면 표시: 검은 배경 위에 흰색으로 승리 메시지 출력.
     """
     fenetre.fill(NOIR)  # 검은 화면
-    police = pygame.font.SysFont("Arial", 36)
-    game_over_text = police.render(f"{winner} Wins!", True, BLANC)
+    police_game_over = pygame.font.SysFont("Arial", 36)
+    game_over_text = police_game_over.render(f"{winner} Wins!", True, BLANC)
     fenetre.blit(game_over_text,
                  (fenetre.get_width() // 2 - game_over_text.get_width() // 2,
                   fenetre.get_height() // 2 - game_over_text.get_height() // 2))
 
-# 버튼 그리기 함수
+
 def draw_buttons(fenetre, current_player):
     """
     발사 버튼을 화면에 그리기.
@@ -147,6 +174,18 @@ def draw_buttons(fenetre, current_player):
     fenetre.blit(shoot_self_text, (shoot_self_button_rect.x + 10, shoot_self_button_rect.y + 10))
     fenetre.blit(shoot_opponent_text, (shoot_opponent_button_rect.x + 10, shoot_opponent_button_rect.y + 10))
 
+
+def apply_damage(target_player, damage):
+    """
+    대상 플레이어에게 데미지를 적용합니다. Scarecrow 보호 상태를 확인합니다.
+    """
+    if not scarecrow_protected[target_player]:
+        player_lives[target_player] = max(0, player_lives[target_player] - damage)
+    else:
+        print(f"Player {target_player + 1} is protected by Scarecrow!")
+        scarecrow_protected[target_player] = False  # 보호 상태 초기화
+
+
 run = True
 while run:
     fenetre.blit(background, (0, 0))
@@ -154,17 +193,17 @@ while run:
     if in_menu:
         # 메뉴 화면 처리
         if est_survole(490, 475, jouer_texte.get_width(), jouer_texte.get_height()):
-            jouer_texte = police.render("Play", 1, ROUGE)
+            jouer_texte = police.render("Play", True, ROUGE)
         else:
-            jouer_texte = police.render("Play", 1, BLANC)
+            jouer_texte = police.render("Play", True, BLANC)
         if est_survole(490, 510, regles_texte.get_width(), regles_texte.get_height()):
-            regles_texte = police.render("Rules", 1, ROUGE)
+            regles_texte = police.render("Rules", True, ROUGE)
         else:
-            regles_texte = police.render("Rules", 1, BLANC)
+            regles_texte = police.render("Rules", True, BLANC)
         if est_survole(480, 545, quitter_texte.get_width(), quitter_texte.get_height()):
-            quitter_texte = police.render("Quit", 1, ROUGE)
+            quitter_texte = police.render("Quit", True, ROUGE)
         else:
-            quitter_texte = police.render("Quit", 1, BLANC)
+            quitter_texte = police.render("Quit", True, BLANC)
 
         fenetre.blit(jouer_texte, (490, 475))
         fenetre.blit(regles_texte, (490, 510))
@@ -182,8 +221,10 @@ while run:
 
                     # 게임 시작 시 초기 설정
                     arme.recharge()  # 총알 충전
-                    cigarette1_active = True  # Player 1 담배 활성화
-                    cigarette2_active = True  # Player 2 담배 활성화
+                    cigarette1.active = True  # Player 1 담배 활성화
+                    cigarette2.active = True  # Player 2 담배 활성화
+                    scarecrow1.reset()  # Player 1 Scarecrow 활성화
+                    scarecrow2.reset()  # Player 2 Scarecrow 활성화
 
                     # Bullet 아이템 초기화
                     for bullet in bullets:
@@ -222,10 +263,16 @@ while run:
         fenetre.blit(retour_button_image, retour_button_rect.topleft)
 
         # 담배 활성화 상태에 따라 위치에 표시
-        if cigarette1_active:
+        if cigarette1.active:
             cigarette1.affiche_cigarette(fenetre, *cigarette1_position)  # Player 1 담배 위치
-        if cigarette2_active:
+        if cigarette2.active:
             cigarette2.affiche_cigarette(fenetre, *cigarette2_position)  # Player 2 담배 위치
+
+        # Scarecrow 활성화 상태에 따라 위치에 표시
+        if scarecrow1.active:
+            scarecrow1.draw(fenetre)  # Player 1 Scarecrow 위치
+        if scarecrow2.active:
+            scarecrow2.draw(fenetre)  # Player 2 Scarecrow 위치
 
         # Bullet 아이템 그리기
         for bullet in bullets:
@@ -244,6 +291,14 @@ while run:
                         bullet_enhanced[current_player] = True  # 현재 플레이어의 강화 상태 설정
                         break  # 한 번에 하나의 아이템만 클릭 가능
 
+                # Scarecrow 아이템 클릭하여 효과 적용
+                if scarecrow1.active and current_player == 0:
+                    if scarecrow1.click(mouse_pos, current_player, player_lives):
+                        scarecrow_protected[1] = True  # Player 2 보호 상태 설정
+                elif scarecrow2.active and current_player == 1:
+                    if scarecrow2.click(mouse_pos, current_player, player_lives):
+                        scarecrow_protected[0] = True  # Player 1 보호 상태 설정
+
                 # 뒤로가기 버튼 클릭 시 메뉴로 이동
                 if retour_button_rect.collidepoint(mouse_pos):
                     in_menu = True
@@ -261,7 +316,7 @@ while run:
                                 bullet_enhanced[current_player] = False  # 강화 상태 초기화
                             if bullet_type == 1:
                                 # 실탄인 경우 데미지 적용
-                                player_lives[current_player] = max(0, player_lives[current_player] - damage)
+                                apply_damage(current_player, damage)
                             # 공포탄인 경우 데미지 없음
                             game_over, loser = check_game_over(player_lives)
                             if game_over:
@@ -282,7 +337,7 @@ while run:
                             if bullet_type == 1:
                                 # 실탄인 경우 상대에게 데미지 적용
                                 opponent = (current_player + 1) % 2
-                                player_lives[opponent] = max(0, player_lives[opponent] - damage)
+                                apply_damage(opponent, damage)
                             # 공포탄인 경우 데미지 없음
                             game_over, loser = check_game_over(player_lives)
                             if game_over:
@@ -291,20 +346,20 @@ while run:
                             current_player = (current_player + 1) % 2  # 턴을 상대방에게 넘김
 
                 # Player 1 담배 상호작용 (Player 1의 차례에서만 가능)
-                if current_player == 0 and cigarette1_active and pygame.Rect(
+                if current_player == 0 and cigarette1.active and pygame.Rect(
                         cigarette1_position[0], cigarette1_position[1],
                         cigarette1.image.get_width(), cigarette1.image.get_height()).collidepoint(
                     mouse_pos):
                     player_lives[0] += 1  # Player 1 생명력 증가
-                    cigarette1_active = False  # 담배 사용 후 비활성화
+                    cigarette1.active = False  # 담배 사용 후 비활성화
 
                 # Player 2 담배 상호작용 (Player 2의 차례에서만 가능)
-                if current_player == 1 and cigarette2_active and pygame.Rect(
+                if current_player == 1 and cigarette2.active and pygame.Rect(
                         cigarette2_position[0], cigarette2_position[1],
                         cigarette2.image.get_width(), cigarette2.image.get_height()).collidepoint(
                     mouse_pos):
                     player_lives[1] += 1  # Player 2 생명력 증가
-                    cigarette2_active = False  # 담배 사용 후 비활성화
+                    cigarette2.active = False  # 담배 사용 후 비활성화
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
@@ -312,8 +367,21 @@ while run:
                     arme.recharge()
 
                     # 50% 확률로 담배 다시 활성화
-                    cigarette1_active = random.choice([True, False])
-                    cigarette2_active = random.choice([True, False])
+                    cigarette1.active = random.choice([True, False])
+                    cigarette2.active = random.choice([True, False])
+
+                    # 50% 확률로 Scarecrow 다시 활성화 및 위치 설정
+                    if random.choice([True, False]):
+                        scarecrow1.reset(new_position=(0, 0))  # 왼쪽 최상단에 생성
+                        print("Scarecrow1 activated at (0, 0)")
+                    else:
+                        scarecrow1.active = False
+
+                    if random.choice([True, False]):
+                        scarecrow2.reset(new_position=(0, 0))  # 왼쪽 최상단에 생성
+                        print("Scarecrow2 activated at (0, 0)")
+                    else:
+                        scarecrow2.active = False
 
                     # Bullet 아이템 다시 활성화
                     for bullet in bullets:
