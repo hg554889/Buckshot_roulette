@@ -1,3 +1,4 @@
+# main.py
 import pygame
 import random
 from menu import Menu
@@ -7,7 +8,7 @@ from map import Carte
 from cigarettes import Cigarette
 from enhanced_bullet import Bullet
 from scarecrow import Scarecrow
-from grenade import Grenade
+from grenade import Grenade  # Grenade 클래스 임포트
 import os
 
 pygame.init()
@@ -100,6 +101,16 @@ retour_button_image = pygame.transform.scale(retour_button_image, retour_button_
 retour_button_rect = retour_button_image.get_rect()
 retour_button_rect.topleft = (20, 620)  # 뒤로가기 버튼 위치
 
+# **Grenade 위치 설정: Scarecrow 바로 아래로 배치**
+# Scarecrow 크기가 (80, 80)이라고 가정하고, y 좌표에 10 픽셀 여유 추가
+grenade_offset_y = 80 + 10  # Scarecrow 높이 + 여유 공간
+grenade1_position = (scarecrow1_position[0], scarecrow1_position[1] + grenade_offset_y)
+grenade2_position = (scarecrow2_position[0], scarecrow2_position[1] + grenade_offset_y)
+grenade_positions = [
+    grenade1_position,  # Player 1의 Grenade 위치
+    grenade2_position   # Player 2의 Grenade 위치
+]
+grenades = [Grenade(position=pos, size=(50, 50)) for pos in grenade_positions]  # Grenade 인스턴스 생성
 
 def est_survole(x, y, largeur, hauteur):
     """
@@ -107,7 +118,6 @@ def est_survole(x, y, largeur, hauteur):
     """
     souris_x, souris_y = pygame.mouse.get_pos()
     return x < souris_x < x + largeur and y < souris_y < y + hauteur
-
 
 def affiche_vie(fenetre, lives):
     """
@@ -126,7 +136,6 @@ def affiche_vie(fenetre, lives):
     fenetre.blit(text_p1_surface, ((fenetre_rect.width - text_p1_surface.get_width()) // 2, text_y))
     fenetre.blit(text_p2_surface, ((fenetre_rect.width - text_p2_surface.get_width()) // 2, text_y + 30))
 
-
 def affiche_tour(fenetre, current_player):
     """
     현재 플레이어의 턴을 화면에 표시.
@@ -141,7 +150,6 @@ def affiche_tour(fenetre, current_player):
         # Player 2의 턴일 때: 오른쪽 위에 표시
         fenetre.blit(turn_text, (fenetre.get_width() - turn_text.get_width() - 20, 20))
 
-
 def check_game_over(lives):
     """
     게임 종료 조건 확인. 생명력이 0 이하인 플레이어가 있으면 True와 해당 플레이어 반환.
@@ -150,7 +158,6 @@ def check_game_over(lives):
         if life <= 0:
             return True, i
     return False, -1
-
 
 def draw_game_over(fenetre, winner):
     """
@@ -163,7 +170,6 @@ def draw_game_over(fenetre, winner):
                  (fenetre.get_width() // 2 - game_over_text.get_width() // 2,
                   fenetre.get_height() // 2 - game_over_text.get_height() // 2))
 
-
 def draw_buttons(fenetre, current_player):
     """
     발사 버튼을 화면에 그리기.
@@ -174,7 +180,6 @@ def draw_buttons(fenetre, current_player):
     fenetre.blit(shoot_self_text, (shoot_self_button_rect.x + 10, shoot_self_button_rect.y + 10))
     fenetre.blit(shoot_opponent_text, (shoot_opponent_button_rect.x + 10, shoot_opponent_button_rect.y + 10))
 
-
 def apply_damage(target_player, damage):
     """
     대상 플레이어에게 데미지를 적용합니다. Scarecrow 보호 상태를 확인합니다.
@@ -184,7 +189,6 @@ def apply_damage(target_player, damage):
     else:
         print(f"Player {target_player + 1} is protected by Scarecrow!")
         scarecrow_protected[target_player] = False  # 보호 상태 초기화
-
 
 run = True
 while run:
@@ -278,6 +282,10 @@ while run:
         for bullet in bullets:
             bullet.draw(fenetre)
 
+        # **Grenade 아이템 그리기**
+        for grenade in grenades:
+            grenade.draw(fenetre)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -304,7 +312,26 @@ while run:
                     in_menu = True
                     game.playing = False
 
-                elif shoot_self_button_rect.collidepoint(mouse_pos):
+                # **Grenade 아이템 클릭하여 효과 적용**
+                for grenade in grenades:
+                    if grenade.is_clicked(mouse_pos):
+                        # 모든 플레이어의 HP를 -1
+                        for i in range(len(player_lives)):
+                            player_lives[i] = max(0, player_lives[i] - 1)
+                        print("Grenade 사용됨: 모든 플레이어의 HP가 1 감소했습니다.")
+                        grenade.use()  # Grenade 사용 처리
+
+                        # 게임 종료 확인
+                        game_over, loser = check_game_over(player_lives)
+                        if game_over:
+                            winner = "Player 1" if loser == 1 else "Player 2"
+                            break
+                        # 턴을 다음 플레이어로 넘김
+                        current_player = (current_player + 1) % 2
+                        break  # 한 번에 하나의 아이템만 클릭 가능
+
+                # 발사 버튼 클릭 처리
+                if shoot_self_button_rect.collidepoint(mouse_pos):
                     # 본인을 발사 대상으로 선택
                     if arme.chargeur:
                         bullet_type = arme.tire()
@@ -373,13 +400,11 @@ while run:
                     # 50% 확률로 Scarecrow 다시 활성화 및 위치 설정
                     if random.choice([True, False]):
                         scarecrow1.reset(new_position=(0, 0))  # 왼쪽 최상단에 생성
-                        print("Scarecrow1 activated at (0, 0)")
                     else:
                         scarecrow1.active = False
 
                     if random.choice([True, False]):
                         scarecrow2.reset(new_position=(0, 0))  # 왼쪽 최상단에 생성
-                        print("Scarecrow2 activated at (0, 0)")
                     else:
                         scarecrow2.active = False
 
@@ -387,6 +412,11 @@ while run:
                     for bullet in bullets:
                         if random.choice([True, False]):
                             bullet.reset()
+
+                    # **Grenade 아이템 다시 활성화 (50% 확률)**
+                    for grenade in grenades:
+                        if not grenade.active and random.choice([True, False]):
+                            grenade.active = True
 
     elif game_over:
         # 게임 종료 화면
